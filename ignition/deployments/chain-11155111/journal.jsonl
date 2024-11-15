@@ -1,0 +1,3 @@
+
+{"chainId":11155111,"type":"DEPLOYMENT_INITIALIZE"}
+{"artifactId":"RandomModule#Random","constructorArgs":["48174830142776465173713416888080785440723938908336982394441279292739615684127","0x8103B0A8A00be2DDC778e6e7eaa21791Cd364625","0x474e34a077df58807dbe9c96d3c009b23b3c6d0cce433e59bbf5b34f823bc56c"],"contractName":"Random","dependencies":[],"from":"0x117230682974d73f2db5c21f0268de2facb0119f","futureId":"RandomModule#Random","futureType":"NAMED_ARTIFACT_CONTRACT_DEPLOYMENT","libraries":{},"strategy":"basic","strategyConfig":{},"type":"DEPLOYMENT_EXECUTION_STATE_INITIALIZE","value":{"_kind":"bigint","value":"0"}}
