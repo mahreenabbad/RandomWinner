@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.24;
-
+import {ConfirmedOwner} from "@chainlink/contracts@1.2.0/src/v0.8/shared/access/ConfirmedOwner.sol";
 import {VRFConsumerBaseV2Plus} from "@chainlink/contracts@1.2.0/src/v0.8/vrf/dev/VRFConsumerBaseV2Plus.sol";
 import {VRFV2PlusClient} from "@chainlink/contracts@1.2.0/src/v0.8/vrf/dev/libraries/VRFV2PlusClient.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
@@ -68,7 +68,7 @@ contract Random is VRFConsumerBaseV2Plus, ERC721URIStorage {
 
     address[] public ticketOwners;
     uint ticketPrice = 0.00001 ether;
-    uint256 id = 1;
+    uint256 public id = 1;
 
     function mintTicket(address _to, string memory _uri) public payable {
         require(_to != address(0), "invalid Address");
