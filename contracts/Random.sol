@@ -7,7 +7,11 @@ import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 
 contract Random is VRFConsumerBaseV2Plus, ERC721URIStorage {
     event RequestSent(uint256 requestId, uint32 numWords);
-    event RequestFulfilled(uint256 requestId, uint256[] randomWords);
+    event RequestFulfilled(
+        uint256 requestId,
+        uint256[] randomWords,
+        address currentWinner
+    );
 
     struct RequestStatus {
         bool fulfilled; // whether the request has been successfully fulfilled
@@ -41,7 +45,7 @@ contract Random is VRFConsumerBaseV2Plus, ERC721URIStorage {
 
     // For this example, retrieve 2 random values in one request.
     // Cannot exceed VRFCoordinatorV2_5.MAX_NUM_WORDS.
-    uint32 public numWords = 2;
+    uint32 public numWords = 1;
 
     /**
      * HARDCODED FOR SEPOLIA
@@ -127,6 +131,7 @@ contract Random is VRFConsumerBaseV2Plus, ERC721URIStorage {
             uint256 winnerIndex = _randomWords[0] % ticketOwners.length;
 
             currentWinner = ticketOwners[winnerIndex];
+            emit RequestFulfilled(_requestId, _randomWords, currentWinner);
         }
     }
 
@@ -141,13 +146,13 @@ contract Random is VRFConsumerBaseV2Plus, ERC721URIStorage {
     }
 
     //provides the status of a randomness request.
-    // function getRequestStatus(
-    //     uint256 _requestId
-    // ) external view returns (bool fulfilled, uint256 randomWord) {
-    //     require(s_requests[_requestId].exists, "request not found");
-    //     RequestStatus memory request = s_requests[_requestId];
-    //     return (request.fulfilled, request.randomWord);
-    // }
+    function getRequestStatus(
+        uint256 _requestId
+    ) external view returns (bool fulfilled, uint256[] memory randomWords) {
+        require(s_requests[_requestId].exists, "request not found");
+        RequestStatus memory request = s_requests[_requestId];
+        return (request.fulfilled, request.randomWords);
+    }
 
     //The following functions are overrides required by Solidity.
     function tokenURI(
@@ -164,3 +169,4 @@ contract Random is VRFConsumerBaseV2Plus, ERC721URIStorage {
 }
 
 //retrieving random data, hashing it, and then collectively generating a random number
+//0xfD83D2b5DDf81350513071b7fb25Fb69d5dE29FA
