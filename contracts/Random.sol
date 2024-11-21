@@ -30,14 +30,13 @@ contract Random is VRFConsumerBaseV2Plus, ERC721URIStorage {
 
     event Minted(address from, address to, uint tokenId);
     event Transfered(address to, uint id);
-
     bytes32 public keyHash =
         0x787d74caea10b2b357790d5b5247c2f63d1d91572a9846f780606e4d953677ae;
+    // bytes32 public keyHash =
+    //     0x787d74caea10b2b357790d5b5247c2f63d1d91572a9846f780606e4d953677ae;
     // fulfillRandomWords() function. Storing each word costs about 20,000 gas,
     // so 100,000 is a safe default for this example contract. Test and adjust
-    // this limit based on the network that you select, the size of the request,
-    // and the processing of the callback request in the fulfillRandomWords()
-    // function.
+
     uint32 public callbackGasLimit = 100000;
 
     // The default is 3, but you can set this higher.
@@ -62,6 +61,7 @@ contract Random is VRFConsumerBaseV2Plus, ERC721URIStorage {
         s_subscriptionId = subscriptionId;
     }
 
+    event Debug(uint256 randomNumber, uint256 winnerIndex, address winner);
     mapping(address => uint256) public ticketsMint;
 
     address public currentWinner;
@@ -85,9 +85,8 @@ contract Random is VRFConsumerBaseV2Plus, ERC721URIStorage {
 
     // Assumes the subscription is funded sufficiently.
     //Sends a request to the Chainlink VRF Oracle
-    function randomWinner(
-        bool enableNativePayment
-    ) external onlyOwner returns (uint256 requestId) {
+    function randomWinner() external onlyOwner returns (uint256 requestId) {
+        require(ticketOwners.length > 0, "no ticket minted");
         // Will revert if subscription is not set and funded.
         requestId = s_vrfCoordinator.requestRandomWords(
             VRFV2PlusClient.RandomWordsRequest({
@@ -97,9 +96,7 @@ contract Random is VRFConsumerBaseV2Plus, ERC721URIStorage {
                 callbackGasLimit: callbackGasLimit,
                 numWords: numWords,
                 extraArgs: VRFV2PlusClient._argsToBytes(
-                    VRFV2PlusClient.ExtraArgsV1({
-                        nativePayment: enableNativePayment
-                    })
+                    VRFV2PlusClient.ExtraArgsV1({nativePayment: false})
                 )
             })
         );
@@ -112,6 +109,7 @@ contract Random is VRFConsumerBaseV2Plus, ERC721URIStorage {
         requestIds.push(requestId);
         lastRequestId = requestId;
         emit RequestSent(requestId, numWords);
+        // request_runner[requestId] = tokenId;
         return requestId;
     }
 
@@ -121,18 +119,16 @@ contract Random is VRFConsumerBaseV2Plus, ERC721URIStorage {
         uint256[] calldata _randomWords
     ) internal override {
         require(s_requests[_requestId].exists, "request not found");
-
+        require(ticketOwners.length > 0, "No tickets minted yet");
         s_requests[_requestId].fulfilled = true;
-        //  uint  randomNumber = _randomWords[0];
-        s_requests[_requestId].randomWords = new uint256[](_randomWords.length);
-        for (uint256 i = 0; i < _randomWords.length; i++) {
-            s_requests[_requestId].randomWords[i] = _randomWords[i];
-            require(ticketOwners.length > 0, "No tickets minted yet");
-            uint256 winnerIndex = _randomWords[0] % ticketOwners.length;
+        s_requests[_requestId].randomWords = _randomWords;
+        uint randomNumber = _randomWords[0];
+        uint256 winnerIndex = randomNumber % ticketOwners.length;
 
-            currentWinner = ticketOwners[winnerIndex];
-            emit RequestFulfilled(_requestId, _randomWords, currentWinner);
-        }
+        currentWinner = ticketOwners[winnerIndex];
+
+        emit Debug(randomNumber, winnerIndex, currentWinner);
+        emit RequestFulfilled(_requestId, _randomWords, currentWinner);
     }
 
     function nftTransfer(uint _id) external {
@@ -169,4 +165,4 @@ contract Random is VRFConsumerBaseV2Plus, ERC721URIStorage {
 }
 
 //retrieving random data, hashing it, and then collectively generating a random number
-//0xfD83D2b5DDf81350513071b7fb25Fb69d5dE29FA
+// contractAddress 0x682Fe67b7BcAD35Bced26618022FCf1A1FEA494C

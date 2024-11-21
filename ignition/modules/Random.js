@@ -1,7 +1,7 @@
 const { buildModule } = require("@nomicfoundation/hardhat-ignition/modules");
 
 const subscriptionId =
-  "48174830142776465173713416888080785440723938908336982394441279292739615684127";
+  "18519595116180166042061678876817691063258995766210222005326249960568868181746";
 
 module.exports = buildModule("RandomModule", (m) => {
   const random = m.contract("Random", [subscriptionId]);

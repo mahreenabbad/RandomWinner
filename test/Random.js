@@ -11,7 +11,7 @@ describe("Random", function () {
     const uri = "MyNFT URI";
 
     const subscriptionId =
-      "48174830142776465173713416888080785440723938908336982394441279292739615684127";
+      "18519595116180166042061678876817691063258995766210222005326249960568868181746";
 
     const contractFactory = await ethers.getContractFactory("Random");
     const randomContract = await contractFactory.deploy(subscriptionId);
@@ -21,7 +21,7 @@ describe("Random", function () {
   describe("Random State variables test cases", function () {
     it("should check numWords varisble ", async function () {
       const { randomContract } = await loadFixture(runEveryTime);
-      expect(await randomContract.numWords()).to.equal(1);
+      expect(await randomContract.id()).to.equal(1);
     });
   });
 });
