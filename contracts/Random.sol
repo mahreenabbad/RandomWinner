@@ -10,11 +10,11 @@ contract Random is VRFConsumerBaseV2Plus, ERC721URIStorage {
     event RequestFulfilled(
         uint256 requestId,
         uint256[] randomWords,
-        address currentWinner
+        address[] currentWinner
     );
 
     struct RequestStatus {
-        bool fulfilled; // whether the request has been successfully fulfilled
+        bool fulfilled; // whether the request has been fulfilled
         bool exists; // whether a requestId exists
         uint256[] randomWords;
     }
@@ -32,10 +32,6 @@ contract Random is VRFConsumerBaseV2Plus, ERC721URIStorage {
     event Transfered(address to, uint id);
     bytes32 public keyHash =
         0x787d74caea10b2b357790d5b5247c2f63d1d91572a9846f780606e4d953677ae;
-    // bytes32 public keyHash =
-    //     0x787d74caea10b2b357790d5b5247c2f63d1d91572a9846f780606e4d953677ae;
-    // fulfillRandomWords() function. Storing each word costs about 20,000 gas,
-    // so 100,000 is a safe default for this example contract. Test and adjust
 
     uint32 public callbackGasLimit = 100000;
 
@@ -44,13 +40,7 @@ contract Random is VRFConsumerBaseV2Plus, ERC721URIStorage {
 
     // For this example, retrieve 2 random values in one request.
     // Cannot exceed VRFCoordinatorV2_5.MAX_NUM_WORDS.
-    uint32 public numWords = 1;
-
-    /**
-     * HARDCODED FOR SEPOLIA
-     * COORDINATOR: 0x9DdfaCa8183c41ad55329BdeeD9F6A8d53168B1B
-     */
-    // address s_owner;
+    uint32 public numWords;
 
     constructor(
         uint256 subscriptionId
@@ -61,16 +51,16 @@ contract Random is VRFConsumerBaseV2Plus, ERC721URIStorage {
         s_subscriptionId = subscriptionId;
     }
 
-    event Debug(uint256 randomNumber, uint256 winnerIndex, address winner);
     mapping(address => uint256) public ticketsMint;
 
-    address public currentWinner;
+    address[] public currentWinner;
 
     address[] public ticketOwners;
     uint ticketPrice = 0.00001 ether;
     uint256 public id = 1;
 
     function mintTicket(address _to, string memory _uri) public payable {
+        require(ticketsMint[_to] == 0, " already owns a ticket");
         require(_to != address(0), "invalid Address");
         require(msg.value >= ticketPrice, "Insufficient funds to redeem");
 
@@ -85,8 +75,15 @@ contract Random is VRFConsumerBaseV2Plus, ERC721URIStorage {
 
     // Assumes the subscription is funded sufficiently.
     //Sends a request to the Chainlink VRF Oracle
-    function randomWinner() external onlyOwner returns (uint256 requestId) {
-        require(ticketOwners.length > 0, "no ticket minted");
+    function randomWinner(
+        uint32 _numOfWinners
+    ) external onlyOwner returns (uint256 requestId) {
+        require(ticketOwners.length > 1, "less ticket minted than required");
+        require(
+            _numOfWinners > 1 && _numOfWinners < ticketOwners.length,
+            "Invalid number of winners"
+        );
+        numWords = _numOfWinners;
         // Will revert if subscription is not set and funded.
         requestId = s_vrfCoordinator.requestRandomWords(
             VRFV2PlusClient.RandomWordsRequest({
@@ -109,9 +106,11 @@ contract Random is VRFConsumerBaseV2Plus, ERC721URIStorage {
         requestIds.push(requestId);
         lastRequestId = requestId;
         emit RequestSent(requestId, numWords);
-        // request_runner[requestId] = tokenId;
+
         return requestId;
     }
+
+    mapping(uint256 => bool) public winnerSelected;
 
     //callback function used by vrf consumer base to provide random numbr request
     function fulfillRandomWords(
@@ -119,26 +118,52 @@ contract Random is VRFConsumerBaseV2Plus, ERC721URIStorage {
         uint256[] calldata _randomWords
     ) internal override {
         require(s_requests[_requestId].exists, "request not found");
-        require(ticketOwners.length > 0, "No tickets minted yet");
         s_requests[_requestId].fulfilled = true;
         s_requests[_requestId].randomWords = _randomWords;
-        uint randomNumber = _randomWords[0];
-        uint256 winnerIndex = randomNumber % ticketOwners.length;
+        // require(ticketOwners.length > numWords, "less tickets minted than required");
 
-        currentWinner = ticketOwners[winnerIndex];
+        // Clear previous winners
+        delete currentWinner;
 
-        emit Debug(randomNumber, winnerIndex, currentWinner);
+        // Select winners using random numbers
+        for (uint256 i = 0; i < numWords; i++) {
+            uint256 index = _randomWords[i] % ticketOwners.length;
+
+            while (winnerSelected[index]) {
+                //check if already selected, it moves to the next
+                index = (index + 1) % ticketOwners.length; // Ensure no duplicates
+            }
+            winnerSelected[index] = true;
+            currentWinner.push(ticketOwners[index]);
+        }
+
         emit RequestFulfilled(_requestId, _randomWords, currentWinner);
     }
 
-    function nftTransfer(uint _id) external {
-        require(ownerOf(_id) == msg.sender, "You do not own this token");
+    function nftTransfer(uint256[] calldata _ids) external {
         require(
-            currentWinner != address(0) && ticketsMint[currentWinner] != 0,
-            "Invalid address"
+            _ids.length == currentWinner.length,
+            "Token IDs count must match winners count"
         );
-        _transfer(msg.sender, currentWinner, _id);
-        emit Transfered(currentWinner, _id);
+        require(currentWinner.length > 0, "No winners selected");
+
+        for (uint i = 0; i < currentWinner.length; i++) {
+            address winner = currentWinner[i];
+            uint tokenId = _ids[i];
+
+            // require(ownerOf(tokenId) == msg.sender, "You do not own this token");
+            require(winner != address(0), "Invalid winner address");
+
+            // Transfer the token to the current winner
+            _transfer(msg.sender, winner, tokenId);
+
+            emit Transfered(winner, tokenId);
+        }
+    }
+
+    // Get the list of current winners
+    function getCurrentWinners() external view returns (address[] memory) {
+        return currentWinner;
     }
 
     //provides the status of a randomness request.
@@ -165,4 +190,3 @@ contract Random is VRFConsumerBaseV2Plus, ERC721URIStorage {
 }
 
 //retrieving random data, hashing it, and then collectively generating a random number
-// contractAddress 0x682Fe67b7BcAD35Bced26618022FCf1A1FEA494C
